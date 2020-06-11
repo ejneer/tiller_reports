@@ -14,7 +14,7 @@ library(plotly)
 ```{r}
 options(
   gargle_oauth_cache = ".secrets",
-  gargle_oauth_email = "ericjneer@gmail.com"
+  gargle_oauth_email = TRUE
 )
 ```
 
