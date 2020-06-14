@@ -1,0 +1,124 @@
+---
+output: html_document
+---
+
+## Column
+
+### Income and Spending by Week, Prior 8 Weeks
+```{r}
+weekly_income <- weekly_cash_flow %>%
+  select(Week, Income)
+
+net_weekly <- weekly_cash_flow %>%
+  select(Net)
+
+income_spending_chart <- weekly_cash_flow %>%
+  filter(Week %in% breaks$Week) %>%
+  select(Week, `Weekly Income` = Income, `Weekly Spending` = Spending) %>%
+  mutate(`Weekly Spending` = -`Weekly Spending`) %>%
+  pivot_longer(
+    c(`Weekly Spending`, `Weekly Income`),
+    names_to = "Cash Flow Group",
+    values_to = "Amount"
+  ) %>%
+  ggplot() +
+  geom_col( 
+    aes(x = Week, y = Amount, fill = `Cash Flow Group`),
+    position = "dodge2",
+    width = 3
+  ) +
+  scale_x_date(
+    labels = scales::date_format("%b %d"),
+    breaks = breaks$Week
+  ) +
+  theme(
+    legend.title = element_blank(), 
+    legend.position="top"
+  ) + 
+  labs(x ="Week (By Sunday)", y = "Amount")
+
+ggplotly(income_spending_chart + theme)
+```
+
+### Net Spending by Week, Prior 8 Weeks
+```{r}
+net_spending_chart <- weekly_cash_flow %>%
+  filter(Week %in% breaks$Week) %>%
+  select(Week, `Net Income` = Net, `Cumulative Income` = Cumulative) %>% 
+  pivot_longer(-Week, names_to = "Statistic", values_to = "Amount") %>%
+  ggplot() + 
+  aes(x = Week, y = Amount, color = Statistic) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 0) + 
+  scale_x_date(labels = scales::date_format("%d %b"), breaks = breaks$Week) +
+  theme(
+    legend.title = element_blank(), 
+    legend.position="top"
+  ) + 
+  labs(x ="Week (By Sunday)", y = "Amount")
+
+ggplotly(net_spending_chart + theme)
+```
+   
+## Column
+
+### Monthly Cash Flow Overview
+
+```{r}
+monthly_cash_flow <- reportable_transactions %>%
+  mutate(
+    `Cash Flow Group` = if_else(Group == "Income", "Income", "Spending")
+  ) %>%
+  group_by(Month, `Cash Flow Group`) %>%
+  summarize(Amount = sum(Amount))
+
+reportable_transactions %>%
+  group_by(Month, Group) %>%
+  summarize(Amount = sum(Amount)) %>%
+  pivot_wider(id_cols = Month, names_from = Group, values_from = Amount) %>%
+  mutate_at(vars(-group_cols()), function(x) replace_na(x, 0)) %>%
+  ungroup() %>%
+  mutate(
+    Net = Income + Bills + Discretionary,
+    Cumulative = cumsum(Net)
+  ) %>%
+  arrange(desc(Month)) %>%
+  knitr::kable(digits = 2)
+```
+
+ 
+### Discretionary Spending by Category
+    
+```{r}
+top_discretionary_categories <- reportable_transactions %>%
+  filter(Group == "Discretionary") %>%
+  group_by(Category) %>%
+  summarize(Amount = sum(Amount)) %>%
+  top_n(5, wt = abs(Amount)) %>%
+  pull(Category)
+
+reportable_transactions %>%
+  filter(Category %in% top_discretionary_categories) %>%
+  bind_rows(
+    reportable_transactions %>% 
+      filter(
+        Group == "Discretionary", 
+        !Category %in% top_discretionary_categories
+      ) %>%
+      mutate(
+        Category = "Other"
+      )
+  ) %>%
+  group_by(Month, Category) %>%
+  summarize(Amount = sum(Amount)) %>%
+  pivot_wider(
+    id_cols = Month,
+    names_from = Category,
+    values_from = Amount,
+    values_fill = list(Amount = 0)
+  ) %>%
+  arrange(desc(Month)) %>% 
+  ungroup() %>% 
+  knitr::kable(digits = 2)
+```

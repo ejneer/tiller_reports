@@ -58,24 +58,10 @@ breaks = weekly_cash_flow %>% select(Week) %>% tail(8)
 
 # Overview
 
-## Column
+```{r child = "overview.Rmd"}
 
-### Income and Spending by Week, Prior 8 Weeks
-```{r child = "income_spending.Rmd"}
 ```
 
-### Net Spending by Week, Prior 8 Weeks
-```{r child = "net_spending.Rmd"}
-```
-   
-## Column
 
-### Monthly Cash Flow Overview
+# Monthly Overview
 
-```{r child = "cash_flow.Rmd"}
-```
- 
-### Discretionary Spending by Category
-    
-```{r child = "discretionary_spending.Rmd"}
-```
