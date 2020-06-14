@@ -1,0 +1,37 @@
+---
+output: html_document
+---
+
+```{r}
+top_discretionary_categories <- reportable_transactions %>%
+  filter(Group == "Discretionary") %>%
+  group_by(Category) %>%
+  summarize(Amount = sum(Amount)) %>%
+  top_n(5, wt = abs(Amount)) %>%
+  pull(Category)
+
+reportable_transactions %>%
+  filter(Category %in% top_discretionary_categories) %>%
+  bind_rows(
+    reportable_transactions %>% 
+      filter(
+        Group == "Discretionary", 
+        !Category %in% top_discretionary_categories
+      ) %>%
+      mutate(
+        Category = "Other"
+      )
+  ) %>%
+  group_by(Month, Category) %>%
+  summarize(Amount = sum(Amount)) %>%
+  pivot_wider(
+    id_cols = Month,
+    names_from = Category,
+    values_from = Amount,
+    values_fill = list(Amount = 0)
+  ) %>%
+  arrange(desc(Month)) %>% 
+  ungroup() %>% 
+  knitr::kable(digits = 2)
+```
+

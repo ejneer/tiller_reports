@@ -11,31 +11,33 @@ library(ggplot2)
 library(plotly)
 ```
 
-```{r}
+```{r include=FALSE}
 options(
   gargle_oauth_cache = ".secrets",
   gargle_oauth_email = TRUE
 )
+
+sheet_id <- "19XVxijLjfoICUzaFb_R-4vlWuCdeagcMWye2E2Gp4AM"
+theme = theme_minimal()
 ```
 
-
 ```{r}
-sheet_id <- "19XVxijLjfoICUzaFb_R-4vlWuCdeagcMWye2E2Gp4AM"
 transactions <- read_sheet(sheet_id, sheet = "Transactions") %>% 
   mutate(
     Week = as.Date(Week),
     Month = month(Month, label = TRUE, abbr = FALSE)
   )
-categories <- read_sheet(sheet_id, sheet = "Categories") %>% rename(Hide = `Hide From Reports`) %>% select(Category:Hide)
-balances <- read_sheet(sheet_id, sheet = "Balance History")
-```
 
-```{r}
+categories <- read_sheet(sheet_id, sheet = "Categories") %>% 
+  rename(Hide = `Hide From Reports`) %>% 
+  select(Category:Hide)
+
+balances <- read_sheet(sheet_id, sheet = "Balance History")
+
 reportable_transactions <- transactions %>% 
   inner_join(categories) %>% 
   filter(is.na(Hide))
-```
-```{r}
+
 weekly_cash_flow <- reportable_transactions %>%
   group_by(Week, Group) %>%
   summarize(Amount = sum(Amount)) %>%
@@ -50,61 +52,8 @@ weekly_cash_flow <- reportable_transactions %>%
     Cumulative = cumsum(Net),
   )
 
-weekly_income <- weekly_cash_flow %>%
-  select(Week, Income)
-
-net_weekly <- weekly_cash_flow %>%
-  select(Net)
-```
-
-```{r}
 # define how many weeks to include in weekly spending charts
 breaks = weekly_cash_flow %>% select(Week) %>% tail(8)
-```
-
-```{r}
-income_spending_chart <- weekly_cash_flow %>%
-  filter(Week %in% breaks$Week) %>%
-  select(Week, `Weekly Income` = Income, `Weekly Spending` = Spending) %>%
-  mutate(`Weekly Spending` = -`Weekly Spending`) %>%
-  pivot_longer(
-    c(`Weekly Spending`, `Weekly Income`),
-    names_to = "Cash Flow Group",
-    values_to = "Amount"
-  ) %>%
-  ggplot() +
-  geom_col( 
-    aes(x = Week, y = Amount, fill = `Cash Flow Group`),
-    position = "dodge2",
-    width = 3
-  ) +
-  scale_x_date(
-    labels = scales::date_format("%b %d"),
-    breaks = breaks$Week
-  ) +
-  theme(
-    legend.title = element_blank(), 
-    legend.position="top"
-  ) + 
-  labs(x ="Week (By Sunday)", y = "Amount")
-```
-
-```{r}
-net_spending_chart <- weekly_cash_flow %>%
-  filter(Week %in% breaks$Week) %>%
-  select(Week, `Net Income` = Net, `Cumulative Income` = Cumulative) %>% 
-  pivot_longer(-Week, names_to = "Statistic", values_to = "Amount") %>%
-  ggplot() + 
-  aes(x = Week, y = Amount, color = Statistic) +
-  geom_line() +
-  geom_point() +
-  geom_hline(yintercept = 0) + 
-  scale_x_date(labels = scales::date_format("%d %b"), breaks = breaks$Week) +
-  theme(
-    legend.title = element_blank(), 
-    legend.position="top"
-  ) + 
-  labs(x ="Week (By Sunday)", y = "Amount")
 ```
 
 # Overview
@@ -112,73 +61,21 @@ net_spending_chart <- weekly_cash_flow %>%
 ## Column
 
 ### Income and Spending by Week, Prior 8 Weeks
-```{r}
-theme = theme_minimal()
-ggplotly(income_spending_chart + theme)
+```{r child = "income_spending.Rmd"}
 ```
 
 ### Net Spending by Week, Prior 8 Weeks
-```{r}
-ggplotly(net_spending_chart + theme)
+```{r child = "net_spending.Rmd"}
 ```
-
-
    
 ## Column
 
 ### Monthly Cash Flow Overview
 
-```{r}
-reportable_transactions %>%
-  group_by(Month, Group) %>%
-  summarize(Amount = sum(Amount)) %>%
-  pivot_wider(id_cols = Month, names_from = Group, values_from = Amount) %>%
-  mutate_at(vars(-group_cols()), function(x) replace_na(x, 0)) %>%
-  ungroup() %>%
-  mutate(
-    Net = Income + Bills + Discretionary,
-    Cumulative = cumsum(Net)
-  ) %>%
-  arrange(desc(Month)) %>%
-  knitr::kable(digits = 2)
+```{r child = "cash_flow.Rmd"}
 ```
  
 ### Discretionary Spending by Category
     
-```{r}
-top_discretionary_categories <- reportable_transactions %>%
-  filter(Group == "Discretionary") %>%
-  group_by(Category) %>%
-  summarize(Amount = sum(Amount)) %>%
-  top_n(5, wt = abs(Amount)) %>%
-  pull(Category)
-
-reportable_transactions %>%
-  filter(Category %in% top_discretionary_categories) %>%
-  bind_rows(
-    reportable_transactions %>% 
-      filter(
-        Group == "Discretionary", 
-        !Category %in% top_discretionary_categories
-      ) %>%
-      mutate(
-        Category = "Other"
-      )
-  ) %>%
-  group_by(Month, Category) %>%
-  summarize(Amount = sum(Amount)) %>%
-  pivot_wider(
-    id_cols = Month,
-    names_from = Category,
-    values_from = Amount,
-    values_fill = list(Amount = 0)
-  ) %>%
-  arrange(desc(Month)) %>% 
-  ungroup() %>% 
-  knitr::kable(digits = 2)
+```{r child = "discretionary_spending.Rmd"}
 ```
-```{r}
-
-```
-
-# Discretionary Spending
