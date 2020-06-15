@@ -2,6 +2,26 @@
 output: html_document
 ---
 
+```{r}
+weekly_cash_flow <- reportable_transactions %>%
+  group_by(Week, Group) %>%
+  summarize(Amount = sum(Amount)) %>%
+  pivot_wider(id_cols = Week,
+              names_from = Group,
+              values_from = Amount) %>%
+  mutate_at(vars(-group_cols()), function(x) replace_na(x, 0)) %>%
+  ungroup() %>%
+  mutate(
+    Spending = Bills + Discretionary,
+    Net = Income + Spending,
+    Cumulative = cumsum(Net),
+  )
+
+# define how many weeks to include in weekly spending charts
+breaks = weekly_cash_flow %>% select(Week) %>% tail(8)
+```
+
+
 ## Column
 
 ### Income and Spending by Week, Prior 8 Weeks
@@ -37,7 +57,7 @@ income_spending_chart <- weekly_cash_flow %>%
   ) + 
   labs(x ="Week (By Sunday)", y = "Amount")
 
-ggplotly(income_spending_chart + theme)
+ggplotly(income_spending_chart + report_theme)
 ```
 
 ### Net Spending by Week, Prior 8 Weeks
@@ -58,7 +78,7 @@ net_spending_chart <- weekly_cash_flow %>%
   ) + 
   labs(x ="Week (By Sunday)", y = "Amount")
 
-ggplotly(net_spending_chart + theme)
+ggplotly(net_spending_chart + report_theme)
 ```
    
 ## Column
