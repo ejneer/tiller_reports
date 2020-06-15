@@ -1,0 +1,97 @@
+---
+output: html_document
+---
+
+```{r}
+monthly_income_expense <- reportable_transactions %>%
+  group_by(Month, Type) %>%
+  summarize(Amount = sum(Amount)) %>%
+  mutate(Amount = if_else(Type == "Expense", -Amount, Amount)) %>%
+  pivot_wider(names_from = Type, values_from = Amount) %>%
+  mutate(`Net` = Income - Expense)
+
+spending_by_type <- reportable_transactions %>%
+  group_by(Month, Group) %>%
+  summarize(Amount = sum(Amount)) %>%
+  pivot_wider(names_from = Group, values_from = Amount) %>%
+  mutate(Net = Income + Bills + Discretionary)
+```
+
+## Row or Column Break
+
+### Income
+```{r}
+# current month income valuebox
+valueBox(
+  monthly_income_expense %>%
+    filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
+    pull(Income)
+)
+```
+
+### Expenses
+```{r}
+# current month expense valuebox
+valueBox(
+  monthly_income_expense %>%
+    filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
+    pull(Expense)
+)
+```
+
+### Bill Spending
+```{r}
+valueBox(
+  spending_by_type %>%
+    filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
+    pull(Bills)
+)
+```
+
+
+### Discretionary Spending
+```{r}
+valueBox(
+  spending_by_type %>%
+    filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
+    pull(Discretionary)
+)
+```
+
+## Row or Column Break
+
+### Income vs Expense
+```{r}
+# Expenses and Income vs Month Bar Chart
+ggplotly(
+  monthly_income_expense %>%
+    select(-Net) %>%
+    pivot_longer(-Month, names_to = "Type", values_to = "Amount") %>%
+    ggplot(.) +
+    aes(x = Month, y = Amount, fill = Type) +
+    geom_col(position = "dodge") +
+    report_theme
+)
+```
+
+## Row or Column Break
+
+### Net Income with Discretionary and Bill Spending
+
+```{r}
+ggplotly(
+  spending_by_type %>%
+    select(-Income) %>%
+    mutate(
+      Bills = -Bills,
+      Discretionary = -Discretionary
+    ) %>%
+    pivot_longer(-Month, names_to = "Type", values_to = "Amount") %>%
+    # plotting
+    ggplot(.) + 
+    aes(x = Month, y = Amount, group = Type, color = Type) +
+    geom_line() +
+    geom_point() +
+    report_theme
+)
+```

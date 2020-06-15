@@ -1,6 +1,8 @@
 ---
 title: "Neer Financial Dashboard"
-output: flexdashboard::flex_dashboard
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
 ---
 
 ```{r, include=FALSE}
@@ -9,6 +11,7 @@ library(googlesheets4)
 library(lubridate)
 library(ggplot2)
 library(plotly)
+library(flexdashboard)
 ```
 
 ```{r include=FALSE}
@@ -18,14 +21,14 @@ options(
 )
 
 sheet_id <- "19XVxijLjfoICUzaFb_R-4vlWuCdeagcMWye2E2Gp4AM"
-theme = theme_minimal()
+report_theme = theme_minimal()
 ```
 
 ```{r}
 transactions <- read_sheet(sheet_id, sheet = "Transactions") %>% 
   mutate(
     Week = as.Date(Week),
-    Month = month(Month, label = TRUE, abbr = FALSE)
+    Month = format.Date(Date, "%Y-%m")
   )
 
 categories <- read_sheet(sheet_id, sheet = "Categories") %>% 
@@ -37,31 +40,17 @@ balances <- read_sheet(sheet_id, sheet = "Balance History")
 reportable_transactions <- transactions %>% 
   inner_join(categories) %>% 
   filter(is.na(Hide))
-
-weekly_cash_flow <- reportable_transactions %>%
-  group_by(Week, Group) %>%
-  summarize(Amount = sum(Amount)) %>%
-  pivot_wider(id_cols = Week,
-              names_from = Group,
-              values_from = Amount) %>%
-  mutate_at(vars(-group_cols()), function(x) replace_na(x, 0)) %>%
-  ungroup() %>%
-  mutate(
-    Spending = Bills + Discretionary,
-    Net = Income + Spending,
-    Cumulative = cumsum(Net),
-  )
-
-# define how many weeks to include in weekly spending charts
-breaks = weekly_cash_flow %>% select(Week) %>% tail(8)
 ```
 
 # Overview
 
 ```{r child = "overview.Rmd"}
-
 ```
 
 
-# Monthly Overview
+# Monthly Summary
+
+```{r child = "monthly_summary.Rmd"}
+```
+
 
