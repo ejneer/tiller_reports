@@ -25,7 +25,10 @@ spending_by_type <- reportable_transactions %>%
 valueBox(
   monthly_income_expense %>%
     filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
-    pull(Income)
+    pull(Income) %>%
+    dollar(),
+  icon = "fa-dollar-sign",
+  color = "success"
 )
 ```
 
@@ -35,7 +38,10 @@ valueBox(
 valueBox(
   monthly_income_expense %>%
     filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
-    pull(Expense)
+    pull(Expense) %>%
+    dollar(),
+  icon = "fa-dollar-sign",
+  color = "info"
 )
 ```
 
@@ -44,7 +50,10 @@ valueBox(
 valueBox(
   spending_by_type %>%
     filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
-    pull(Bills)
+    pull(Bills) %>%
+    dollar(),
+  icon = "fa-dollar-sign",
+  color = "primary"
 )
 ```
 
@@ -54,7 +63,10 @@ valueBox(
 valueBox(
   spending_by_type %>%
     filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
-    pull(Discretionary)
+    pull(Discretionary) %>%
+    dollar(),
+  icon = "fa-dollar-sign",
+  color = "primary"
 )
 ```
 
@@ -63,25 +75,38 @@ valueBox(
 ### Income vs Expense
 ```{r}
 # Expenses and Income vs Month Bar Chart
+
+evp_bar_chart <- geom_col(
+      data = monthly_income_expense %>%
+        select(-Net) %>%
+        pivot_longer(-Month, names_to = "Type", values_to = "Amount"),
+      mapping = aes(x = Month, y = Amount, fill = Type),
+      position = "dodge"
+    )
+
+net_line_chart <- geom_line(
+    data =  spending_by_type %>% select(Net),
+    mapping = aes(x = Month, y = Net, group = 1)
+  ) 
+
+net_scatter_chart <-   geom_point(
+    data =  spending_by_type %>% select(Net),
+    mapping = aes(x = Month, y = Net)
+  ) 
+  
 ggplotly(
-  monthly_income_expense %>%
-    select(-Net) %>%
-    pivot_longer(-Month, names_to = "Type", values_to = "Amount") %>%
-    ggplot(.) +
-    aes(x = Month, y = Amount, fill = Type) +
-    geom_col(position = "dodge") +
-    report_theme
+   ggplot() + evp_bar_chart + net_line_chart + net_scatter_chart + report_theme
 )
 ```
 
 ## Row or Column Break
 
-### Net Income with Discretionary and Bill Spending
+### Discretionary and Bill Spending
 
 ```{r}
 ggplotly(
   spending_by_type %>%
-    select(-Income) %>%
+    select(-c(Income, Net)) %>%
     mutate(
       Bills = -Bills,
       Discretionary = -Discretionary
