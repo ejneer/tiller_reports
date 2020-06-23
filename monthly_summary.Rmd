@@ -27,8 +27,7 @@ valueBox(
     filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
     pull(Income) %>%
     dollar(),
-  icon = "fa-dollar-sign",
-  color = "success"
+  icon = "fa-dollar-sign"
 )
 ```
 
@@ -40,8 +39,7 @@ valueBox(
     filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
     pull(Expense) %>%
     dollar(),
-  icon = "fa-dollar-sign",
-  color = "info"
+  icon = "fa-dollar-sign"
 )
 ```
 
@@ -52,8 +50,7 @@ valueBox(
     filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
     pull(Bills) %>%
     dollar(),
-  icon = "fa-dollar-sign",
-  color = "primary"
+  icon = "fa-dollar-sign"
 )
 ```
 
@@ -65,8 +62,7 @@ valueBox(
     filter(Month == format.Date(Sys.Date(), "%Y-%m")) %>%
     pull(Discretionary) %>%
     dollar(),
-  icon = "fa-dollar-sign",
-  color = "primary"
+  icon = "fa-dollar-sign"
 )
 ```
 
@@ -117,6 +113,7 @@ ggplotly(
     aes(x = Month, y = Amount, group = Type, color = Type) +
     geom_line() +
     geom_point() +
-    report_theme
+    report_theme + 
+    expand_limits(y=0)
 )
 ```
